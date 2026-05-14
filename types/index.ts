@@ -2,19 +2,44 @@
 export type RiskStatus = "flagged" | "blocked" | "review" | "clear";
 
 export interface Transaction {
-  id: string;
-  customer: string;
+  id: number;
+  customerId: string;
   amount: number;
-  type: string;
+  currency: string;
+  transactionType: string;
   location: string;
-  time: string;
-  risk: number;
-  status: RiskStatus;
-  flags: string[];
+  deviceFingerprint: string;
+  // Additional fields for frontend display
+  time?: string;
+  risk?: number;
+  status?: RiskStatus;
+  flags?: string[];
   actionedBy?: string;
   actionedAt?: string;
   escalatedTo?: string;
   note?: string;
+}
+
+export interface Customer {
+  id?: number;
+  accountNumber: string;
+  fullName: string;
+  location: string;
+}
+
+export interface RiskReport {
+  id?: number;
+  transaction: {
+    id: number;
+  };
+  riskScore: number;
+  flagReason: string;
+}
+
+export interface StatsSummary {
+  totalVolume: number;
+  flaggedCount: number;
+  clearedCount: number;
 }
 
 export interface StatusConfig {
@@ -43,7 +68,7 @@ export interface TransactionRowProps {
 
 export interface DetailPanelProps {
   transaction: Transaction;
-  onApprove: (id: string) => void;
-  onBlock: (id: string) => void;
-  onEscalate: (id: string) => void;
+  onApprove: (id: number) => void;
+  onBlock: (id: number) => void;
+  onEscalate: (id: number) => void;
 }

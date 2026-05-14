@@ -1,5 +1,5 @@
 
-import type { Transaction } from "@/types";
+import type { Transaction, Customer, RiskReport } from "@/types";
 
 export async function getTransactions(params?: {
   page?: number;
@@ -24,11 +24,9 @@ export async function getTransactions(params?: {
 }
 
 export interface StatsSummary {
-  flagged: number;
-  blocked: number;
-  review: number;
-  clear: number;
   totalVolume: number;
+  flaggedCount: number;
+  clearedCount: number;
 }
 
 export async function getStatsSummary(): Promise<StatsSummary> {
@@ -40,4 +38,35 @@ export async function getStatsSummary(): Promise<StatsSummary> {
   }
 
   return res.json();
+}
+
+export interface ReportPayload {
+  transaction: {
+    id: number;
+  };
+  riskScore: number;
+  flagReason: string;
+}
+
+export interface ReportResponse {
+  reportId: string;
+  transactionId: string;
+  status: string;
+  createdAt: string;
+}
+
+export async function createReport(payload: ReportPayload): Promise<RiskReport> {
+  const res = await fetch("/api/reports", {
+    method: "POST",
+    headers:  { "Content-Type": "application/json"},
+    body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err= await res.json();
+      throw new Error(err.error || "Failed to create report");
+
+    }
+
+    return res.json() as Promise<RiskReport>;
 }

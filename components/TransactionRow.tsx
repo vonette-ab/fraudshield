@@ -1,13 +1,27 @@
 
 import { TransactionRowProps } from "@/types";
-import { statusConfig, riskColor } from "@/data/transactions";
+
+const statusConfig = {
+  flagged: { label: "Flagged", bg: "rgba(255,59,71,0.12)", color: "#FF3B47", dot: "#FF3B47" },
+  blocked: { label: "Blocked", bg: "rgba(180,0,255,0.12)", color: "#B400FF", dot: "#B400FF" },
+  review: { label: "In Review", bg: "rgba(255,149,0,0.12)", color: "#FF9500", dot: "#FF9500" },
+  clear: { label: "Clear", bg: "rgba(52,200,90,0.12)", color: "#34C85A", dot: "#34C85A" },
+};
+
+const riskColor = (score: number): string => {
+  if (score >= 80) return "#FF3B47";
+  if (score >= 50) return "#FF9500";
+  return "#34C85A";
+};
 
 export default function TransactionRow({
   txn,
   isSelected,
   onClick,
 }: TransactionRowProps) {
-  const sc = statusConfig[txn.status];
+  const sc =
+    statusConfig[(txn.status as keyof typeof statusConfig) || "clear"] ??
+    statusConfig.clear;
 
   return (
     <div
@@ -34,7 +48,7 @@ export default function TransactionRow({
       }}
     >
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>{txn.customer}</div>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>{txn.customerId}</div>
         <div
           style={{
             fontSize: 11,
@@ -48,7 +62,7 @@ export default function TransactionRow({
       </div>
 
       <div>
-        <div style={{ fontSize: 13 }}>{txn.type}</div>
+        <div style={{ fontSize: 13 }}>{txn.transactionType}</div>
         <div
           style={{
             fontSize: 11,

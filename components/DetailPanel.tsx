@@ -4,13 +4,20 @@
 
 import { useState } from "react";
 import { DetailPanelProps } from "@/types";
-import { statusConfig } from "@/data/transactions";
 import RiskMeter from "./RiskMeter";
 
-
+const statusConfig = {
+  flagged: { label: "Flagged", bg: "rgba(255,59,71,0.12)", color: "#FF3B47", dot: "#FF3B47" },
+  blocked: { label: "Blocked", bg: "rgba(180,0,255,0.12)", color: "#B400FF", dot: "#B400FF" },
+  review: { label: "In Review", bg: "rgba(255,149,0,0.12)", color: "#FF9500", dot: "#FF9500" },
+  clear: { label: "Clear", bg: "rgba(52,200,90,0.12)", color: "#34C85A", dot: "#34C85A" },
+};
 
 export default function DetailPanel({ transaction: txn, onApprove, onBlock, onEscalate  }: DetailPanelProps) {
-  const sc = statusConfig[txn.status];
+  const sc =
+    statusConfig[(txn.status as keyof typeof statusConfig) || "clear"] ??
+    statusConfig.clear;
+  const flags = txn.flags ?? [];
   
 const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 const [note, setNote] = useState("");
@@ -37,9 +44,9 @@ const [note, setNote] = useState("");
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <RiskMeter score={txn.risk} />
+        <RiskMeter score={txn.risk ?? 0} />
         <div>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{txn.customer}</div>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{txn.customerId}</div>
           <div
             style={{
               fontFamily: "'DM Mono', monospace",
@@ -79,7 +86,7 @@ const [note, setNote] = useState("");
         {(
           [
             ["Amount", `GHS ${txn.amount.toLocaleString()}`],
-            ["Type", txn.type],
+            ["Type", txn.transactionType],
             ["Location", txn.location],
             ["Time", txn.time],
           ] as [string, string][]
@@ -101,7 +108,7 @@ const [note, setNote] = useState("");
         ))}
       </div>
 
-      {txn.flags.length > 0 && (
+      {flags.length > 0 && (
         <div
           style={{
             borderTop: "1px solid rgba(255,255,255,0.06)",
@@ -120,7 +127,7 @@ const [note, setNote] = useState("");
             Risk Flags
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {txn.flags.map((flag) => (
+            {flags.map((flag) => (
               <div
                 key={flag}
                 style={{

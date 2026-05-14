@@ -3,7 +3,12 @@
 
 import { useState, useEffect } from "react";
 import { RiskMeterProps } from "@/types";
-import { riskColor } from "@/data/transactions";
+
+const riskColor = (score: number): string => {
+  if (score >= 80) return "#FF3B47";
+  if (score >= 50) return "#FF9500";
+  return "#34C85A";
+};
 
 export default function RiskMeter({ score }: RiskMeterProps) {
   const [display, setDisplay] = useState(0);

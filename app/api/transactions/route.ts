@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-const FRAUDSHIELD_API_URL = process.env.FRAUDSHIELD_API_URL || "http://localhost:8080";
+const FRAUDSHIELD_API_URL = process.env.FRAUDSHIELD_API_URL || "http://192.168.0.125:8080";
 
 export async function GET(req: NextRequest) {
   try {

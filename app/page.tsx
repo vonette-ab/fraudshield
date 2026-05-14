@@ -1,33 +1,43 @@
 
 "use client";
 
-import { useState,useEffect} from "react";
+import { useState, useEffect } from "react";
 import { Transaction } from "@/types";
-import { transactions, statusConfig } from "@/data/transactions";
-import { getTransactions, getStatsSummary, StatsSummary } from "@/lib/fraudshield";
+import { getTransactions, getStatsSummary, StatsSummary, createReport } from "@/lib/fraudshield";
 
 import Header from "@/components/Header";
 import StatCard from "@/components/StatCard";
 import TransactionRow from "@/components/TransactionRow";
 import DetailPanel from "@/components/DetailPanel";
 
+const statusConfig = {
+  flagged: { label: "Flagged", bg: "rgba(255,59,71,0.12)", color: "#FF3B47", dot: "#FF3B47" },
+  blocked: { label: "Blocked", bg: "rgba(180,0,255,0.12)", color: "#B400FF", dot: "#B400FF" },
+  review: { label: "In Review", bg: "rgba(255,149,0,0.12)", color: "#FF9500", dot: "#FF9500" },
+  clear: { label: "Clear", bg: "rgba(52,200,90,0.12)", color: "#34C85A", dot: "#34C85A" },
+};
+
+
 
 
 
 export default function FraudDashboard() {
-  const [transactionList, setTransactionList] = useState<Transaction[]>(transactions);
-const [selected, setSelected] = useState<Transaction>(transactions[0]);
-const [filter, setFilter] = useState<string>("all");
-const [search, setSearch] = useState<string>("");
-const [stats, setStats] = useState<StatsSummary | null>(null);
+  const [transactionList, setTransactionList] = useState<Transaction[]>([]);
+  const [selected, setSelected] = useState<Transaction | null>(null);
+  const [filter, setFilter] = useState<string>("all");
+  const [search, setSearch] = useState<string>("");
+  const [stats, setStats] = useState<StatsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
 
   
   
+    const searchLower = search.toLowerCase();
+
   const filtered = transactionList.filter((t) => {
     const matchFilter = filter === "all" || t.status === filter;
     const matchSearch =
-      t.customer.toLowerCase().includes(search.toLowerCase()) ||
-      t.id.toLowerCase().includes(search.toLowerCase());
+      (t.customerId ?? "").toLowerCase().includes(searchLower) ||
+      (t.id?.toString() ?? "").toLowerCase().includes(searchLower);
     return matchFilter && matchSearch;
   });
 
@@ -46,11 +56,16 @@ const [stats, setStats] = useState<StatsSummary | null>(null);
 useEffect(() => {
   async function load() {
     try {
+      setLoading(true);
       const data = await getTransactions({ page: 1, pageSize: 20 });
-      setTransactionList(data); 
+      if (data && data.length > 0) {
+        setTransactionList(data);
+        setSelected(data[0]);
+      }
     } catch (err) {
       console.error("Failed to load transactions:", err);
-      // Falls back to dummy data already in state — no crash
+    } finally {
+      setLoading(false);
     }
   }
   load();
@@ -69,7 +84,22 @@ useEffect(() => {
   loadStats();
 }, []);
 
-const handleApprove = (id: string) => {
+
+const handleReport = async (transactionId:number) => {
+  try {
+    await createReport({
+      transaction: { id: transactionId },
+      riskScore: 0,
+      flagReason: "Suspicious activity",
+    });
+    console.log("Report submitted successfully");
+  }catch (err) {
+    console.error("Failed to submit report", err)
+  }
+  
+};
+
+const handleApprove = (id: number) => {
   setTransactionList(prev => {
     const updated = prev.map(t =>
       t.id === id
@@ -81,7 +111,7 @@ const handleApprove = (id: string) => {
   });
 };
 
-const handleBlock = (id: string) => {
+const handleBlock = (id: number) => {
   setTransactionList(prev => {
     const updated = prev.map(t =>
       t.id === id
@@ -93,7 +123,7 @@ const handleBlock = (id: string) => {
   });
 };
 
-const handleEscalate = (id: string) => {
+const handleEscalate = (id: number) => {
   setTransactionList(prev => {
     const updated = prev.map(t =>
       t.id === id
@@ -144,11 +174,11 @@ const handleEscalate = (id: string) => {
 
       <div style={{ padding: "24px 32px 0", display: "flex", gap: 12 }}>
 
-<StatCard label="Flagged"    value={stats?.flagged  ?? counts.flagged}  accent="#FF3B47" sub="Needs action" />
-<StatCard label="Blocked"    value={stats?.blocked  ?? counts.blocked}  accent="#B400FF" sub="Auto-blocked" />
-<StatCard label="In Review"  value={stats?.review   ?? counts.review}   accent="#FF9500" sub="Awaiting decision" />
-<StatCard label="Cleared"    value={stats?.clear    ?? counts.clear}    accent="#34C85A" sub="Today" />
-<StatCard label="Total Volume" value={stats ? `GHS ${stats.totalVolume.toLocaleString()}` : "GHS 45,480"} sub="Last 24 hours" /></div>
+<StatCard label="Flagged"    value={counts.flagged}  accent="#FF3B47" sub="Needs action" />
+<StatCard label="Blocked"    value={counts.blocked}  accent="#B400FF" sub="Auto-blocked" />
+<StatCard label="In Review"  value={counts.review}   accent="#FF9500" sub="Awaiting decision" />
+<StatCard label="Cleared"    value={counts.clear}    accent="#34C85A" sub="Today" />
+<StatCard label="Total Volume" value={stats ? `GHS ${stats.totalVolume.toLocaleString()}` : "-"} sub="Last 24 hours" /></div>
 
 
         
@@ -217,7 +247,29 @@ const handleEscalate = (id: string) => {
               ))}
             </div>
 
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div
+                style={{
+                  padding: "32px 20px",
+                  textAlign: "center",
+                  color: "rgba(255,255,255,0.5)",
+                  fontSize: 13,
+                }}
+              >
+                Loading transactions...
+              </div>
+            ) : transactionList.length === 0 ? (
+              <div
+                style={{
+                  padding: "32px 20px",
+                  textAlign: "center",
+                  color: "rgba(255,255,255,0.3)",
+                  fontSize: 13,
+                }}
+              >
+                No transactions available.
+              </div>
+            ) : filtered.length === 0 ? (
               <div
                 style={{
                   padding: "32px 20px",
