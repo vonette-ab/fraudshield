@@ -1,9 +1,10 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState,useEffect} from "react";
 import { Transaction } from "@/types";
 import { transactions, statusConfig } from "@/data/transactions";
+import { getTransactions, getStatsSummary, StatsSummary } from "@/lib/fraudshield";
 
 import Header from "@/components/Header";
 import StatCard from "@/components/StatCard";
@@ -18,6 +19,7 @@ export default function FraudDashboard() {
 const [selected, setSelected] = useState<Transaction>(transactions[0]);
 const [filter, setFilter] = useState<string>("all");
 const [search, setSearch] = useState<string>("");
+const [stats, setStats] = useState<StatsSummary | null>(null);
 
   
   
@@ -29,12 +31,43 @@ const [search, setSearch] = useState<string>("");
     return matchFilter && matchSearch;
   });
 
+
+  
+
  const counts = {
+
   flagged: transactionList.filter((t) => t.status === "flagged").length,
   blocked: transactionList.filter((t) => t.status === "blocked").length,
   review: transactionList.filter((t) => t.status === "review").length,
   clear: transactionList.filter((t) => t.status === "clear").length,
 };
+
+
+useEffect(() => {
+  async function load() {
+    try {
+      const data = await getTransactions({ page: 1, pageSize: 20 });
+      setTransactionList(data); 
+    } catch (err) {
+      console.error("Failed to load transactions:", err);
+      // Falls back to dummy data already in state — no crash
+    }
+  }
+  load();
+}, []);
+
+useEffect(() => {
+  async function loadStats() {
+    try {
+      const data = await getStatsSummary();
+      setStats(data);
+    } catch (err) {
+      console.error("Failed to load stats:", err);
+      // Falls back to counts calculated from transactionList
+    }
+  }
+  loadStats();
+}, []);
 
 const handleApprove = (id: string) => {
   setTransactionList(prev => {
@@ -110,12 +143,16 @@ const handleEscalate = (id: string) => {
       <Header />
 
       <div style={{ padding: "24px 32px 0", display: "flex", gap: 12 }}>
-        <StatCard label="Flagged" value={counts.flagged} accent="#FF3B47" sub="Needs action" />
-        <StatCard label="Blocked" value={counts.blocked} accent="#B400FF" sub="Auto-blocked" />
-        <StatCard label="In Review" value={counts.review} accent="#FF9500" sub="Awaiting decision" />
-        <StatCard label="Cleared" value={counts.clear} accent="#34C85A" sub="Today" />
-        <StatCard label="Total Volume" value="GHS 45,480" sub="Last 24 hours" />
-      </div>
+
+<StatCard label="Flagged"    value={stats?.flagged  ?? counts.flagged}  accent="#FF3B47" sub="Needs action" />
+<StatCard label="Blocked"    value={stats?.blocked  ?? counts.blocked}  accent="#B400FF" sub="Auto-blocked" />
+<StatCard label="In Review"  value={stats?.review   ?? counts.review}   accent="#FF9500" sub="Awaiting decision" />
+<StatCard label="Cleared"    value={stats?.clear    ?? counts.clear}    accent="#34C85A" sub="Today" />
+<StatCard label="Total Volume" value={stats ? `GHS ${stats.totalVolume.toLocaleString()}` : "GHS 45,480"} sub="Last 24 hours" /></div>
+
+
+        
+        
 
       <div style={{ display: "flex", flex: 1, padding: "24px 32px", gap: 20 }}>
         <div style={{ flex: 1.4, display: "flex", flexDirection: "column", gap: 14 }}>
